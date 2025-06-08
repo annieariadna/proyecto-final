@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar Sesión - UTP{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-university fa-3x text-primary mb-3"></i>
+                    <h3 class="card-title">Iniciar Sesión</h3>
+                    <p class="text-muted">Universidad Tecnológica del Perú</p>
+                </div>
+                
+<form method="POST">  <!-- Asegúrate de que sea POST -->
+    <div class="mb-3">
+        <label for="username" class="form-label">Código</label>
+        <input type="text" class="form-control" id="username" name="username" required placeholder="Ej: U22209220 para Estudiantes o C1234567 para Administradores">
+    </div>
+    <div class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 mb-3">
+        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+    </button>
+</form>
+                <div class="text-center">
+                    <p class="mb-0">¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate aquí</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

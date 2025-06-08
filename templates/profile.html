@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Perfil - UTP{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="nav flex-column">
+                <a class="nav-link" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-home"></i> Inicio
+                </a>
+                <a class="nav-link active" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user"></i> Mi Perfil
+                </a>
+                {% if session.role == 'admin' %}
+                <a class="nav-link" href="{{ url_for('admin_users') }}">
+                    <i class="fas fa-users"></i> Gestionar Usuarios
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-user"></i> Mi Perfil</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+                            <h5>{{ user.full_name }}</h5>
+                            <p class="text-muted">{{ 'Administrador' if user.role == 'admin' else 'Estudiante' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                <i class="fas fa-user text-primary"></i>
+                                <strong>Nombre completo:</strong> {{ user.full_name }}
+                            </div>
+                            <div class="list-group-item">
+                                <i class="fas fa-at text-primary"></i>
+                                <strong>Usuario:</strong> {{ user.username }}
+                            </div>
+                            <div class="list-group-item">
+                                <i class="fas fa-envelope text-primary"></i>
+                                <strong>Email:</strong> {{ user.email }}
+                            </div>
+                            <div class="list-group-item">
+                                <i class="fas fa-id-badge text-primary"></i>
+                                <strong>Rol:</strong> {{ 'Administrador' if user.role == 'admin' else 'Estudiante' }}
+                            </div>
+                            <div class="list-group-item">
+                                <i class="fas fa-calendar text-primary"></i>
+                                <strong>Miembro desde:</strong> {{ user.created_at.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

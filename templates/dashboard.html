@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - UTP{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="nav flex-column">
+                <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-home"></i> Inicio
+                </a>
+                <a class="nav-link" href="{{ url_for('profile') }}">
+                    <i class="fas fa-user"></i> Mi Perfil
+                </a>
+                {% if session.role == 'admin' %}
+                <a class="nav-link" href="{{ url_for('admin_users') }}">
+                    <i class="fas fa-users"></i> Gestionar Usuarios
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenido Principal -->
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-search"></i> Busqueda </h2>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reportModal">
+                <i class="fas fa-plus"></i> Nuevo Reporte
+            </button>
+        </div>
+        
+        <!-- Barra de Búsqueda -->
+        <div class="search-bar">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="object" placeholder="Buscar por objeto..." value="{{ request.args.get('object', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="location" placeholder="Buscar por lugar..." value="{{ request.args.get('location', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" name="date" value="{{ request.args.get('date', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="type">
+                        <option value="">Tipo</option>
+                        <option value="lost" {% if request.args.get('type') == 'lost' %}selected{% endif %}>Perdido</option>
+                        <option value="found" {% if request.args.get('type') == 'found' %}selected{% endif %}>Encontrado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Lista de Reportes -->
+        <div class="row">
+            {% for report in reports %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card report-card {{ 'found' if report.type == 'found' else '' }}">
+                    {% if report.image_filename %}
+                    <img src="{{ url_for('static', filename='uploads/' + report.image_filename) }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">{{ report.object_name }}</h5>
+                            <span class="badge {{ 'badge-found' if report.type == 'found' else 'badge-lost' }}">
+                                {{ 'Encontrado' if report.type == 'found' else 'Perdido' }}
+                            </span>
+                        </div>
+                        <p class="card-text">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</p>
+                        <div class="text-muted small mb-3">
+                            <i class="fas fa-map-marker-alt"></i> {{ report.location }}<br>
+                            <i class="fas fa-calendar"></i> {{ report.date_occurred.strftime('%d/%m/%Y') }}<br>
+                            <i class="fas fa-user"></i> {{ report.reporter_name }}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="contactReport('{{ report.contact_info }}')">
+                                <i class="fas fa-envelope"></i> Contactar
+                            </button>
+                            <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-eye"></i> Ver Detalles
+                            </a>
+                            {% if session.role == 'admin' %}
+                            <a href="{{ url_for('delete_report', report_id=report.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Estás seguro?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if not reports %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No se encontraron reportes</h4>
+            <p class="text-muted">Intenta con otros criterios de búsqueda</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para Nuevo Reporte -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Reporte</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('create_report') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="type" class="form-label">Tipo de Reporte</label>
+                                <select class="form-select" name="type" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="lost">Objeto Perdido</option>
+                                    <option value="found">Objeto Encontrado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="object_name" class="form-label">Nombre del Objeto</label>
+                                <input type="text" class="form-control" name="object_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Lugar (Ej: Aula 101, Lab 205)</label>
+                                <input type="text" class="form-control" name="location" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date_occurred" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" name="date_occurred" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reporter_name" class="form-label">Nombre de Quien Reporta</label>
+                                <input type="text" class="form-control" name="reporter_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="contact_info" class="form-label">Información de Contacto</label>
+                                <input type="text" class="form-control" name="contact_info" placeholder="Email o teléfono" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Imagen (Opcional)</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Reporte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function contactReport(contactInfo) {
+    alert('Información de contacto: ' + contactInfo);
+}
+</script>
+{% endblock %}
