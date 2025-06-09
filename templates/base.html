@@ -55,13 +55,29 @@
         box-shadow: 0 8px 25px rgba(0,0,0,0.15);
     }
     
-    /* Barra lateral */
+.sidebar {
+    background: linear-gradient(135deg, var(--utp-primary), var(--utp-secondary));
+    min-height: 100vh; /* Altura mínima */
+    height: auto; /* Se adapta al contenido */
+    padding: 15px 0;
+    width: 220px;
+}
+
+/* Para que las columnas tengan la misma altura */
+.row {
+    display: flex;
+    align-items: stretch;
+}
+
+/* Opcional: Si quieres que el sidebar siempre cubra toda la altura disponible */
+@media (min-width: 768px) {
     .sidebar {
-        background: linear-gradient(135deg, var(--utp-primary), var(--utp-secondary));
-        min-height: calc(100vh - 76px);
-        padding: 15px 0;
-        width: 220px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
     }
+}
     
     .sidebar .nav-link {
         color: rgba(255,255,255,0.8);
