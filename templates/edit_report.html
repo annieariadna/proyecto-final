@@ -35,19 +35,16 @@
 
 {% block scripts %}
 <script>
-    // S<script>
-    function setReportData(reportId, currentStatus) {
-        // Configurar el ID del reporte en el formulario
-        const formAction = "{{ url_for('update_report', report_id='') }}";
-        document.querySelector('form').action = formAction + reportId;
+function setReportData(reportId, currentStatus) {
+    const formAction = "{{ url_for('update_report', report_id='') }}".replace('','') + reportId; // Asegúrate de concatenar el ID correctamente
+    document.querySelector('form').action = formAction;
 
-        // Configurar el estado actual del reporte en el select
-        const statusSelect = document.getElementById('status');
-        if (currentStatus === 'lost') {
-            statusSelect.value = 'lost';
-        } else if (currentStatus === 'found') {
-            statusSelect.value = 'found';
-        }
+    const statusSelect = document.getElementById('status');
+    if (currentStatus === 'lost') {
+        statusSelect.value = 'lost';
+    } else if (currentStatus === 'found') {
+        statusSelect.value = 'found';
     }
-</script>i es necesario agregar más funcionalidades de JavaScript puedes hacerlo aquí.
+}
+</script>
 {% endblock %}

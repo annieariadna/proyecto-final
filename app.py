@@ -146,7 +146,7 @@ def logout():
     return redirect(url_for('login'))
 
 # Rutas principales
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -155,10 +155,11 @@ def dashboard():
     search_object = request.args.get('object', '')
     search_location = request.args.get('location', '')
     search_date = request.args.get('date', '')
-    search_type = request.args.get('type', '')  # Filtro de tipo (perdido o encontrado)
+    search_type = request.args.get('type', '')
+    search_status = request.args.get('status', '')  # NUEVO: filtro de status
     
-    # Construir query de reportes
-    query = Report.query.filter_by(status='active')
+    # Construir query de reportes - SIN filtro automático de status
+    query = Report.query
     
     if search_object:
         query = query.filter(Report.object_name.contains(search_object))
@@ -167,7 +168,9 @@ def dashboard():
     if search_date:
         query = query.filter(Report.date_occurred == search_date)
     if search_type:
-        query = query.filter(Report.type == search_type)  # Filtro de tipo (perdido o encontrado)
+        query = query.filter(Report.type == search_type)
+    if search_status:  # Solo filtrar por status si se especifica
+        query = query.filter(Report.status == search_status)
     
     reports = query.order_by(Report.created_at.desc()).all()
     
@@ -216,14 +219,14 @@ def view_report(report_id):
     report = Report.query.get_or_404(report_id)
     return render_template('report_detail.html', report=report)
 
-@app.route('/delete_report/<int:report_id>')
+@app.route('/delete_report/<int:report_id>', methods=['GET', 'POST'])
 def delete_report(report_id):
     if 'user_id' not in session or session['role'] != 'admin':
         flash('No tienes permisos para realizar esta acción', 'error')
         return redirect(url_for('dashboard'))
     
     report = Report.query.get_or_404(report_id)
-    report.status = 'deleted'
+    db.session.delete(report)
     db.session.commit()
     
     flash('Reporte eliminado exitosamente', 'success')
@@ -245,45 +248,26 @@ def profile():
     
     user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
+
 @app.route('/update_report/<int:report_id>', methods=['POST'])
 def update_report(report_id):
-    # Lógica para actualizar el reporte con el nuevo estado
-    report = Report.query.get_or_404(report_id)
-    report.status = request.form['status']
-    db.session.commit()
-    flash('Estado del reporte actualizado exitosamente', 'success')
-    return redirect(url_for('dashboard'))
-
-    
-    # Obtener el reporte
     report = Report.query.get_or_404(report_id)
     
-    # Verificar que el reporte pertenece al usuario
-    if report.user_id != session['user_id'] and session['role'] != 'admin':
-        flash('No tienes permiso para modificar este reporte', 'error')
+    # Verifica si el usuario es el propietario del reporte
+    if report.user_id != session['user_id']:
+        flash('No tienes permiso para editar este reporte.', 'error')
         return redirect(url_for('dashboard'))
     
-    # Actualizar los datos del reporte
+    # Actualiza el estado
     report.status = request.form['status']
-    report.object_name = request.form['object_name']
-    report.description = request.form['description']
-    report.contact_info = request.form['contact_info']
-    
-    # Manejar la imagen (si se sube una nueva)
-    if 'image' in request.files:
-        file = request.files['image']
-        if file and file.filename != '':
-            filename = secure_filename(file.filename)
-            unique_filename = str(uuid.uuid4()) + '_' + filename
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
-            report.image_filename = unique_filename
-    
-    # Guardar cambios en la base de datos
     db.session.commit()
     
-    flash('Reporte actualizado correctamente', 'success')
+    # Verificar que el reporte sigue existiendo
+    verificar = Report.query.get(report_id)
+    print(f"Reporte después del commit: ID={verificar.id if verificar else 'NO EXISTE'}, Status={verificar.status if verificar else 'N/A'}")
+    
+    flash('Estado del reporte actualizado correctamente.', 'success')
     return redirect(url_for('dashboard'))
-
 
 if __name__ == '__main__':
     app.run(debug=True)

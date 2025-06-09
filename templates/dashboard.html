@@ -64,10 +64,12 @@
             {% for report in reports %}
 <div class="col-md-6 col-lg-4 mb-4">
     <div class="card report-card 
-        {% if report.type == 'found' %}
-            border-start border-5 border-success   <!-- Borde izquierdo verde para reportes encontrados -->
+        {% if report.status == 'claimed' %}
+            border-start border-5 border-success   <!-- Verde para objetos encontrados/reclamados -->
+        {% elif report.status == 'waiting' or report.type == 'found' %}
+            border-start border-5 border-warning   <!-- Naranja para objetos en espera o encontrados -->
         {% else %}
-            border-start border-5 border-danger    <!-- Borde izquierdo rojo para reportes perdidos -->
+            border-start border-5 border-danger    <!-- Rojo para objetos perdidos -->
         {% endif %}
     ">
         {% if report.image_filename %}
@@ -76,17 +78,23 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <h5 class="card-title">{{ report.object_name }}</h5>
-                <span class="badge 
-                    {% if report.status == 'waiting' %}
-                        bg-warning  <!-- Naranja/Amarillo para "Encontrado, esperando" -->
-                    {% elif report.status == 'claimed' %}
-                        bg-success  <!-- Verde para "Reclamado" -->
-                    {% else %}
-                        bg-danger   <!-- Rojo para "Perdido" -->
-                    {% endif %}
-                ">
-                    {{ 'Encontrado (Esperando)' if report.status == 'waiting' else ('Reclamado' if report.status == 'claimed' else 'Perdido') }}
-                </span>
+<span class="badge 
+    {% if report.status == 'claimed' %}
+        bg-success
+    {% elif report.status == 'waiting' or report.type == 'found' %}
+        bg-warning
+    {% else %}
+        bg-danger
+    {% endif %}
+">
+    {% if report.status == 'claimed' %}
+        Encontrado
+    {% elif report.status == 'waiting' or report.type == 'found' %}
+        Encontrado (En Espera)
+    {% else %}
+        Perdido
+    {% endif %}
+</span>
             </div>
             <p class="card-text">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</p>
             <div class="text-muted small mb-3">
@@ -107,16 +115,18 @@
 
                 <!-- Mostrar botón de editar solo si el usuario logueado es el creador del reporte -->
                 {% if report.user_id == session['user_id'] %}
-                    <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reportModal" onclick="setReportData('{{ report.id }}', '{{ report.status }}')">
+                    <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editReportModal" onclick="setReportData('{{ report.id }}', '{{ report.status }}')">
                         <i class="fas fa-edit"></i> Editar
                     </a>
                 {% endif %}
 
-                {% if session.role == 'admin' %}
-                    <a href="{{ url_for('delete_report', report_id=report.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Estás seguro?')">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                {% endif %}
+{% if session.role == 'admin' %}
+    <form method="POST" action="{{ url_for('delete_report', report_id=report.id) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este reporte?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-trash"></i>
+        </button>
+    </form>
+{% endif %}
             </div>
         </div>
     </div>
@@ -142,14 +152,14 @@
                 <h5 class="modal-title" id="editReportModalLabel">Cambiar Estado del Reporte</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('update_report', report_id=0) }}">
+            <form method="POST" action="{{ url_for('update_report', report_id=0) }}" id="editReportForm">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="status" class="form-label">Estado del Reporte</label>
-                        <select class="form-select" name="status" id="status" required>
-                            <option value="waiting">Esperando</option>
-                            <option value="claimed">Reclamado</option>
+                        <select class="form-select" name="status" id="editStatus" required>
                             <option value="lost">Perdido</option>
+                            <option value="waiting">Encontrado (En Espera)</option>
+                            <option value="claimed">Encontrado</option>
                         </select>
                     </div>
                 </div>
@@ -245,6 +255,16 @@
 <script>
 function contactReport(contactInfo) {
     alert('Información de contacto: ' + contactInfo);
+}
+
+function setReportData(reportId, currentStatus) {
+    // Actualizar la action del formulario con el ID correcto
+    const form = document.getElementById('editReportForm');
+    form.action = '/update_report/' + reportId;
+    
+    // Establecer el valor seleccionado en el select
+    const statusSelect = document.getElementById('editStatus');
+    statusSelect.value = currentStatus;
 }
 </script>
 {% endblock %}
