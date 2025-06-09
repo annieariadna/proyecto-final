@@ -8,7 +8,7 @@
     <div class="col-md-3">
         <div class="sidebar">
             <div class="nav flex-column">
-                <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                <a class="nav-link" href="{{ url_for('dashboard') }}">
                     <i class="fas fa-home"></i> Inicio
                 </a>
                 <a class="nav-link" href="{{ url_for('profile') }}">
@@ -27,7 +27,7 @@
     <div class="col-md-9">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="fas fa-search"></i> Busqueda </h2>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reportModal">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newReportModal">
                 <i class="fas fa-plus"></i> Nuevo Reporte
             </button>
         </div>
@@ -62,43 +62,68 @@
         <!-- Lista de Reportes -->
         <div class="row">
             {% for report in reports %}
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card report-card {{ 'found' if report.type == 'found' else '' }}">
-                    {% if report.image_filename %}
-                    <img src="{{ url_for('static', filename='uploads/' + report.image_filename) }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+<div class="col-md-6 col-lg-4 mb-4">
+    <div class="card report-card 
+        {% if report.type == 'found' %}
+            border-start border-5 border-success   <!-- Borde izquierdo verde para reportes encontrados -->
+        {% else %}
+            border-start border-5 border-danger    <!-- Borde izquierdo rojo para reportes perdidos -->
+        {% endif %}
+    ">
+        {% if report.image_filename %}
+            <img src="{{ url_for('static', filename='uploads/' + report.image_filename) }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+        {% endif %}
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title">{{ report.object_name }}</h5>
+                <span class="badge 
+                    {% if report.status == 'waiting' %}
+                        bg-warning  <!-- Naranja/Amarillo para "Encontrado, esperando" -->
+                    {% elif report.status == 'claimed' %}
+                        bg-success  <!-- Verde para "Reclamado" -->
+                    {% else %}
+                        bg-danger   <!-- Rojo para "Perdido" -->
                     {% endif %}
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title">{{ report.object_name }}</h5>
-                            <span class="badge {{ 'badge-found' if report.type == 'found' else 'badge-lost' }}">
-                                {{ 'Encontrado' if report.type == 'found' else 'Perdido' }}
-                            </span>
-                        </div>
-                        <p class="card-text">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</p>
-                        <div class="text-muted small mb-3">
-                            <i class="fas fa-map-marker-alt"></i> {{ report.location }}<br>
-                            <i class="fas fa-calendar"></i> {{ report.date_occurred.strftime('%d/%m/%Y') }}<br>
-                            <i class="fas fa-user"></i> {{ report.reporter_name }}
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="contactReport('{{ report.contact_info }}')">
-                                <i class="fas fa-envelope"></i> Contactar
-                            </button>
-                            <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn btn-sm btn-outline-info">
-                                <i class="fas fa-eye"></i> Ver Detalles
-                            </a>
-                            {% if session.role == 'admin' %}
-                            <a href="{{ url_for('delete_report', report_id=report.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Estás seguro?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+                ">
+                    {{ 'Encontrado (Esperando)' if report.status == 'waiting' else ('Reclamado' if report.status == 'claimed' else 'Perdido') }}
+                </span>
             </div>
+            <p class="card-text">{{ report.description[:100] }}{% if report.description|length > 100 %}...{% endif %}</p>
+            <div class="text-muted small mb-3">
+                <i class="fas fa-map-marker-alt"></i> {{ report.location }}<br>
+                <i class="fas fa-calendar"></i> {{ report.date_occurred.strftime('%d/%m/%Y') }}<br>
+                <i class="fas fa-user"></i> {{ report.reporter_name }}
+            </div>
+            <div class="d-flex gap-2">
+                <!-- Mostrar Contactar solo si el usuario NO es el propietario del reporte -->
+                {% if report.user_id != session['user_id'] %}
+                    <a href="mailto:{{ report.contact_info }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-envelope"></i> Contactar
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn btn-sm btn-outline-info">
+                    <i class="fas fa-eye"></i> Ver Detalles
+                </a>
+
+                <!-- Mostrar botón de editar solo si el usuario logueado es el creador del reporte -->
+                {% if report.user_id == session['user_id'] %}
+                    <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#reportModal" onclick="setReportData('{{ report.id }}', '{{ report.status }}')">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                {% endif %}
+
+                {% if session.role == 'admin' %}
+                    <a href="{{ url_for('delete_report', report_id=report.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Estás seguro?')">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
             {% endfor %}
         </div>
-        
+
         {% if not reports %}
         <div class="text-center py-5">
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
@@ -109,12 +134,40 @@
     </div>
 </div>
 
-<!-- Modal para Nuevo Reporte -->
-<div class="modal fade" id="reportModal" tabindex="-1">
+<!-- Modal de edición del estado del reporte -->
+<div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Nuevo Reporte</h5>
+                <h5 class="modal-title" id="editReportModalLabel">Cambiar Estado del Reporte</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_report', report_id=0) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Estado del Reporte</label>
+                        <select class="form-select" name="status" id="status" required>
+                            <option value="waiting">Esperando</option>
+                            <option value="claimed">Reclamado</option>
+                            <option value="lost">Perdido</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Estado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nuevo Reporte -->
+<div class="modal fade" id="newReportModal" tabindex="-1" aria-labelledby="newReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newReportModalLabel">Nuevo Reporte</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('create_report') }}" enctype="multipart/form-data">
@@ -137,12 +190,12 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="description" class="form-label">Descripción</label>
                         <textarea class="form-control" name="description" rows="3" required></textarea>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -157,7 +210,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -172,7 +225,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="image" class="form-label">Imagen (Opcional)</label>
                         <input type="file" class="form-control" name="image" accept="image/*">

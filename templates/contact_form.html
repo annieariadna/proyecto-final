@@ -1,0 +1,17 @@
+<!-- contact_form.html -->
+{% extends "base.html" %}
+
+{% block title %}Contactar - UTP+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h3>Enviar mensaje a {{ report.reporter_name }} - {{ report.object_name }}</h3>
+    <form method="POST">
+        <div class="mb-3">
+            <label for="message" class="form-label">Tu mensaje</label>
+            <textarea class="form-control" name="message" id="message" rows="4" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+    </form>
+</div>
+{% endblock %}

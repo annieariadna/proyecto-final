@@ -3,6 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
+from flask import Flask  # Cambiar esto, para importar Flask desde el módulo correcto.
+from flask_migrate import Migrate  # Esto está correcto
+
+
 import os
 import uuid
 
@@ -30,6 +34,9 @@ class User(db.Model):
     role = db.Column(db.String(20), default='student')  # 'admin' or 'student'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relación con los mensajes
+    
+
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(20), nullable=False)  # 'lost' or 'found'
@@ -43,6 +50,9 @@ class Report(db.Model):
     status = db.Column(db.String(20), default='active')  # 'active', 'resolved', 'deleted'
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relación con los mensajes
+   
 
 # Crear tablas
 with app.app_context():
@@ -67,26 +77,27 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('login.html')
 
-@app.route('/login', methods=['GET', 'POST'])  # Esto permite tanto GET como POST
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         
+        # Buscar al usuario en la base de datos
         user = User.query.filter_by(username=username).first()
         
+        # Verificar que el usuario exista y la contraseña sea correcta
         if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = user.role
             session['full_name'] = user.full_name
-            session.permanent = True  # Hacer que la sesión sea permanente
             flash('Inicio de sesión exitoso', 'success')
-            return redirect(url_for('dashboard'))  # Redirigir al dashboard después de iniciar sesión
+            return redirect(url_for('dashboard'))
         else:
-            flash('Credenciales inválidas', 'error')  # Mostrar mensaje de error si las credenciales no son correctas
+            flash('Credenciales inválidas', 'error')
     
-    return render_template('login.html')  # Renderizar la página de inicio de sesión si no se envió el formulario
+    return render_template('login.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -197,7 +208,9 @@ def create_report():
 
 @app.route('/report/<int:report_id>')
 def view_report(report_id):
+    # Verificar si el usuario está autenticado
     if 'user_id' not in session:
+        flash("Debes iniciar sesión para ver los detalles del reporte", "info")
         return redirect(url_for('login'))
     
     report = Report.query.get_or_404(report_id)
@@ -232,6 +245,45 @@ def profile():
     
     user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
+@app.route('/update_report/<int:report_id>', methods=['POST'])
+def update_report(report_id):
+    # Lógica para actualizar el reporte con el nuevo estado
+    report = Report.query.get_or_404(report_id)
+    report.status = request.form['status']
+    db.session.commit()
+    flash('Estado del reporte actualizado exitosamente', 'success')
+    return redirect(url_for('dashboard'))
+
+    
+    # Obtener el reporte
+    report = Report.query.get_or_404(report_id)
+    
+    # Verificar que el reporte pertenece al usuario
+    if report.user_id != session['user_id'] and session['role'] != 'admin':
+        flash('No tienes permiso para modificar este reporte', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Actualizar los datos del reporte
+    report.status = request.form['status']
+    report.object_name = request.form['object_name']
+    report.description = request.form['description']
+    report.contact_info = request.form['contact_info']
+    
+    # Manejar la imagen (si se sube una nueva)
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            unique_filename = str(uuid.uuid4()) + '_' + filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+            report.image_filename = unique_filename
+    
+    # Guardar cambios en la base de datos
+    db.session.commit()
+    
+    flash('Reporte actualizado correctamente', 'success')
+    return redirect(url_for('dashboard'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
