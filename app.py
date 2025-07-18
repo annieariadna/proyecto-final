@@ -51,25 +51,6 @@ class Report(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relación con los mensajes
-   
-
-# Crear tablas
-with app.app_context():
-    db.create_all()
-
-    # Crear usuario admin por defecto si no existe
-    if not User.query.filter_by(username='admin').first():
-        admin = User(
-            username='admin',
-            email='admin@utp.edu.pe',
-            password_hash=generate_password_hash('admin123'),
-            full_name='Administrador del Sistema',
-            role='admin'
-        )
-        db.session.add(admin)
-        db.session.commit()
-
 # Rutas de autenticación
 @app.route('/')
 def index():
@@ -150,6 +131,10 @@ def logout():
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        # Aquí manejarías un botón o acción en el dashboard
+        pass  # o algún return redirect(url_for(...))
     
     # Obtener parámetros de búsqueda
     search_object = request.args.get('object', '')
@@ -268,6 +253,24 @@ def update_report(report_id):
     
     flash('Estado del reporte actualizado correctamente.', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+def eliminar_usuario(user_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        flash('Acceso denegado', 'error')
+        return redirect(url_for('dashboard'))
+
+    user = User.query.get_or_404(user_id)
+
+    if user.role == 'admin':
+        flash('No puedes eliminar a otro administrador.', 'warning')
+        return redirect(url_for('admin_users'))
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'Usuario {user.username} eliminado correctamente.', 'success')
+    return redirect(url_for('admin_users'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
