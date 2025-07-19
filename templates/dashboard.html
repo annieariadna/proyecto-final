@@ -110,25 +110,34 @@
                     </a>
                 {% endif %}
                 <button class="btn btn-sm btn-outline-info"
-                data-bs-toggle="modal"
-                data-bs-target="#reportDetailModal"
-                onclick="showReportDetail(
-                '{{ report.object_name|escape }}',
-                '{{ report.description|escape }}',
-                '{{ report.location|escape }}',
-                '{{ report.date_occurred.strftime('%d/%m/%Y') }}',
-                '{{ report.reporter_name|escape }}',
-                '{{ report.contact_info|escape }}',
-                '{{ url_for('static', filename='uploads/' + report.image_filename) if report.image_filename else '' }}'
-                )">
-                <i class="fas fa-eye"></i> Ver Detalles</button>
-
-
+                        data-bs-toggle="modal"
+                        data-bs-target="#reportDetailModal"
+                        onclick="showReportDetail(
+                            '{{ report.object_name|escape }}',
+                            '{{ report.description|escape }}',
+                            '{{ report.location|escape }}',
+                            '{{ report.date_occurred.strftime('%d/%m/%Y') }}',
+                            '{{ report.reporter_name|escape }}',
+                            '{{ report.contact_info|escape }}',
+                            '{{ url_for('static', filename='uploads/' + report.image_filename) if report.image_filename else '' }}'
+                        )">
+                    <i class="fas fa-eye"></i> Ver Detalles
+                </button>
                 <!-- Mostrar botón de editar solo si el usuario logueado es el creador del reporte -->
                 {% if report.user_id == session['user_id'] %}
-                    <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editReportModal" onclick="setReportData('{{ report.id }}', '{{ report.status }}')">
-                        <i class="fas fa-edit"></i> Editar
-                    </a>
+                <a href="#" 
+                   class="btn btn-sm btn-outline-warning" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#editReportModal" 
+                   onclick="setReportData(
+                       '{{ report.id }}', 
+                       '{{ report.status }}',
+                       `{{ report.description | escape }}`,
+                       `{{ report.location | escape }}`
+                    )">
+                     <i class="fas fa-edit"></i> Editar
+                </a>
+
                 {% endif %}
 
 {% if session.role == 'admin' %}
@@ -181,6 +190,41 @@
             </form>
         </div>
     </div>
+</div>
+<div class="modal fade" id="editReportModal" tabindex="-1" aria-labelledby="editReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="editReportForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editReportModalLabel">Editar Estado del Reporte</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="status" class="form-label">Estado del Reporte</label>
+            <select class="form-select" name="status" id="edit-status" required>
+              <option value="lost">Perdido</option>
+              <option value="found">Encontrado</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" id="edit-description" rows="3" disabled></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Ubicación</label>
+            <input type="text" class="form-control" id="edit-location" disabled>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Actualizar Estado</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 <!-- Modal de Detalles del Reporte -->
 <div class="modal fade" id="reportDetailModal" tabindex="-1" aria-labelledby="reportDetailModalLabel" aria-hidden="true">
@@ -312,6 +356,14 @@ function showReportDetail(titulo, descripcion, lugar, fecha, reportero, contacto
         img.style.display = 'none';
     }
 }
-
+ function openEditModal(reportId, currentStatus, description, location) {
+    const form = document.getElementById('editReportForm');
+    form.action = `/update_report/${reportId}`;
+    document.getElementById('edit-status').value = currentStatus;
+    document.getElementById('edit-description').value = description;
+    document.getElementById('edit-location').value = location;
+    const modal = new bootstrap.Modal(document.getElementById('editReportModal'));
+    modal.show();
+  }
 </script>
 {% endblock %}
